@@ -3,32 +3,30 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Compare Fingerprints & Scans</title>
+<title>Compare Scans</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
-    <h1>Compare Stored Scans</h1>
-    <p class="muted">Lists recent scans stored in KV (consented users only).</p>
-  </header>
-
+  <header class="top"><h1>Compare My Scans</h1><p class="muted">Enter your fingerprint token to list only your scans.</p></header>
   <main class="container">
     <section class="card">
-      <button id="loadScans" class="btn primary">Load recent scans</button>
+      <input id="ownerInput" placeholder="Paste your fingerprint (from report)" />
+      <button id="loadBtn" class="btn primary">Load my scans</button>
       <div id="scanList"></div>
     </section>
     <a href="index.html" class="btn link">Back</a>
   </main>
-
 <script>
-const WORKER_BASE = "https://cyber-exposure-core.YOUR_SUBDOMAIN.workers.dev"; // replace
-document.getElementById('loadScans').addEventListener('click', async () => {
-  const res = await fetch(WORKER_BASE + "/osint-scans");
+document.getElementById('loadBtn').addEventListener('click', async () => {
+  const owner = document.getElementById('ownerInput').value.trim();
+  if(!owner) return alert('Paste your fingerprint token');
+  const base = prompt('Enter your Worker base URL (e.g. https://cyber-exposure-core.YOURDOMAIN.workers.dev)') || '';
+  const res = await fetch(base + '/osint-scans?owner=' + encodeURIComponent(owner));
   const arr = await res.json();
+  if(arr.error) return alert(arr.error);
   const el = document.getElementById('scanList');
-  el.innerHTML = arr.map(s=>`<div class="scan"><h4>${s.query} — ${s.timestamp}</h4><pre>${JSON.stringify(s.results,null,2)}</pre></div>`).join('');
+  el.innerHTML = arr.map(s => `<div class="scan"><h3>${s.query} — ${s.timestamp}</h3><pre>${JSON.stringify(s.summary,null,2)}</pre><pre>${JSON.stringify(s.results.filter(r=>r.confidence>0.3),null,2)}</pre></div>`).join('');
 });
 </script>
-
 </body>
 </html>
