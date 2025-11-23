@@ -1,31 +1,28 @@
 :root{
   --bg:#071229; --card:#0e1a36; --accent:#2fb4ff; --muted:#97b6d9;
-  --glass:rgba(255,255,255,0.03);
 }
 *{box-sizing:border-box;font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif}
 body{margin:0;background:linear-gradient(180deg,#031029,#071229);color:#e8f6ff}
 .top{padding:18px 0;text-align:center}
 .container{max-width:980px;margin:18px auto;padding:0 18px}
 .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:18px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.03)}
-.card.small{padding:12px;font-size:13px}
 .brand h1{margin:0}
 .muted{color:var(--muted);margin-top:6px}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
 .col{flex:1;min-width:220px}
 .btn{padding:10px 14px;border-radius:8px;border:none;cursor:pointer}
-.btn.primary{background:var(--accent);color:#022;box-shadow:0 6px 18px rgba(47,180,255,0.06)}
+.btn.primary{background:var(--accent);color:#022}
 .btn.secondary{background:transparent;color:var(--accent);border:1px solid rgba(47,180,255,0.12)}
 .btn.tertiary{background:#0b2b46;color:var(--muted);border:1px solid rgba(255,255,255,0.02)}
 .btn.link{background:transparent;color:var(--muted);text-decoration:none;padding:8px}
-input[type="text"], input[type="search"], input[type="password"], input[id="consentText"]{
-  padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;width:100%;
-}
 .osint-box{display:flex;gap:8px;margin-top:8px;align-items:center}
 .progress{height:10px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden;margin-top:8px}
 #progressBar{height:100%;width:0;background:linear-gradient(90deg,#2fb4ff,#4ad1ff)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
-.platform{background:var(--glass);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
-.platform h4{margin:0 0 6px 0;color:var(--accent)}
+.platform{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
+.platform h4{margin:0;color:var(--accent)}
 .platform .link{color:#d8f3ff;word-break:break-word}
-footer.footer{text-align:center;padding:12px;color:var(--muted)}
 .scan{border-top:1px dashed rgba(255,255,255,0.03);padding-top:12px;margin-top:12px}
+pre{white-space:pre-wrap;color:#bfe9ff;background:transparent}
+input{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+
