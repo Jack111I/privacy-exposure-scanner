@@ -1,114 +1,117 @@
-// ---- CONFIG ----
-const WORKER_BASE = "https://cyber-exposure-core.YOUR_SUBDOMAIN.workers.dev"; // replace after deploy
-// ---- UTIL ----
-async function sha256hex(str){
+// Frontend script for Cyber-Blue OSINT scanner
+let WORKER_BASE = ""; // will prompt if empty
+
+// small SHA-256 -> hex helper (fingerprint)
+async function sha256hex(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 function el(id){ return document.getElementById(id); }
 
-// ---- CONSENT UI ----
-const allowBtn = el('allowBtn');
-const allowOsintBtn = el('allowOsintBtn');
-const consentText = el('consentText');
-const consentCheckbox = el('confirmOsintCheckbox');
+// consent UI
+const allowBtn = el('allowBtn'), enableOsintBtn = el('enableOsintBtn'), consentText = el('consentText'), confirmCheckbox = el('confirmCheckbox');
 
-consentText.addEventListener('input', ()=> {
-  allowOsintBtn.disabled = !(consentText.value.trim().toUpperCase()==='I CONSENT' && consentCheckbox.checked);
-});
+consentText.addEventListener('input', toggleOsintBtn);
+confirmCheckbox.addEventListener('change', toggleOsintBtn);
+function toggleOsintBtn(){
+  enableOsintBtn.disabled = !(confirmCheckbox.checked && consentText.value.trim().toUpperCase()==='I CONSENT');
+}
 
-allowBtn.addEventListener('click', async () => {
+// collect fingerprint and reveal report
+allowBtn.addEventListener('click', async ()=>{
   allowBtn.disabled = true;
-  // collect fingerprint & show report card
   const fp = await collectBasicFingerprint();
   el('fpHash').textContent = fp.hash;
-  el('uaInfo').textContent = JSON.stringify(fp.ua, null, 2);
+  el('uaInfo').textContent = JSON.stringify(fp.payload, null, 2);
   document.getElementById('consentCard').style.display = 'none';
   document.getElementById('reportCard').style.display = 'block';
-  // Send minimal fingerprint to backend (consented)
-  await fetch(WORKER_BASE + '/collect', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(fp.payload)
-  });
+  // ask for worker base if not set
+  if(!WORKER_BASE) WORKER_BASE = prompt('Enter Worker base URL (e.g. https://cyber-exposure-core.YOURDOMAIN.workers.dev)') || '';
+  if(WORKER_BASE) {
+    // send fingerprint to backend (consented)
+    await fetch(WORKER_BASE + '/collect', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(fp.payload)});
+  } else {
+    alert('Worker base URL not set. You must set it to store scans.');
+  }
 });
 
-allowOsintBtn.addEventListener('click', ()=> {
-  // same as allow but also enable OSINT scan UI
-  allowBtn.click();
-  el('startOsint').disabled = false;
-});
+// enable osint button click -> just triggers same allow behavior
+enableOsintBtn.addEventListener('click', ()=> { allowBtn.click(); el('startOsint').disabled = false; });
 
-// ---- COLLECT BASIC FINGERPRINT ----
+// collect fingerprint
 async function collectBasicFingerprint(){
-  const ua = navigator.userAgent;
-  const payload = {
-    fingerprintSeed: ua + screen.width + 'x' + screen.height + (navigator.language||''),
-    userAgent: ua,
-    language: navigator.language,
-    screen: { width: screen.width, height: screen.height, pr: window.devicePixelRatio },
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown'
-  };
-  const hash = await sha256hex(payload.fingerprintSeed);
-  return { hash, ua:payload.userAgent, payload: {...payload, fingerprint: hash} };
+  const ua = navigator.userAgent || '';
+  const seed = ua + '|' + screen.width + 'x' + screen.height + '|' + (navigator.language||'') + '|' + (Intl.DateTimeFormat().resolvedOptions().timeZone||'');
+  const hash = await sha256hex(seed);
+  const payload = { fingerprint: hash, fingerprintSeed: seed, userAgent: ua, language: navigator.language, screen: {width: screen.width, height: screen.height, pr: window.devicePixelRatio}, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '' };
+  return { hash, payload };
 }
 
-// ---- OSINT SCAN UI ----
-el('startOsint').addEventListener('click', async () =>{
+// OSINT scan
+el('startOsint').addEventListener('click', async ()=>{
   const uname = el('usernameInput').value.trim();
-  if(!uname) return alert('Enter a username first');
+  if(!uname) return alert('Enter username');
+  if(!WORKER_BASE) WORKER_BASE = prompt('Enter Worker base URL') || '';
+  if(!WORKER_BASE) return alert('Worker base required');
+  // use fingerprint as owner token
+  const owner = el('fpHash').textContent.trim();
+  if(!owner) return alert('You must run Allow Scan first');
   el('resultsGrid').innerHTML = '';
   el('progress').style.display = 'block';
-  updateProgress(0);
-  // request backend to run OSINT scan (consent implied because allowOsintBtn was enabled)
-  const res = await fetch(WORKER_BASE + '/osint-scan', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ query: uname })
-  });
-  const job = await res.json();
-  // Show results
-  renderOsintResults(job);
-  el('progress').style.display = 'none';
+  updateProgress(10);
+  try {
+    const res = await fetch(WORKER_BASE + '/osint-scan', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ query: uname, owner })
+    });
+    const job = await res.json();
+    updateProgress(100);
+    renderResults(job);
+    window._lastJob = job;
+  } catch (e) {
+    alert('Scan failed: ' + e.message);
+  } finally {
+    setTimeout(()=>{ el('progress').style.display='none'; updateProgress(0); }, 800);
+  }
 });
 
-// update progress bar (0..100)
-function updateProgress(p){
-  const bar = el('progressBar');
-  bar.style.width = Math.max(0,Math.min(100,p)) + '%';
-}
+function updateProgress(n){ el('progressBar').style.width = Math.max(0,Math.min(100,n)) + '%'; }
 
-// render results with icons and links
-function renderOsintResults(job){
+function renderResults(job){
+  if(job.error) return alert(job.error);
   const grid = el('resultsGrid');
   grid.innerHTML = job.results.map(r => `
     <div class="platform">
       <h4>${r.platform}</h4>
-      <div class="muted">${r.match_type} · confidence ${Math.round(r.confidence*100)}%</div>
-      <div class="link"><a target="_blank" href="${r.url}">${r.url}</a></div>
-      <div class="snippet">${r.snippet? r.snippet : ''}</div>
+      <div class="muted">${r.match_type} · confidence ${Math.round((r.confidence||0)*100)}%</div>
+      <div class="link"><a href="${r.url}" target="_blank" rel="noopener noreferrer">${r.url}</a></div>
+      <div class="snippet">${r.snippet ? r.snippet : ''}</div>
     </div>
   `).join('');
-  // save last job id for export
-  window._lastJob = job;
 }
 
-// Export JSON
-el('exportBtn').addEventListener('click', ()=>{
-  const job = window._lastJob;
-  if(!job) return alert('No results to export');
-  const blob = new Blob([JSON.stringify(job,null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `osint-${job.query}-${(new Date()).toISOString().slice(0,19)}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
+// simulate tracking (educational)
+el('simulateBtn').addEventListener('click', async ()=>{
+  if(!WORKER_BASE) WORKER_BASE = prompt('Enter Worker base URL') || '';
+  if(!WORKER_BASE) return alert('Worker URL required');
+  const owner = el('fpHash').textContent.trim();
+  if(!owner) return alert('Run Allow Scan first');
+  const res = await fetch(WORKER_BASE + '/simulate-tracking?owner=' + encodeURIComponent(owner));
+  const sim = await res.json();
+  if(sim.error) return alert(sim.error);
+  // show simulation results in resultsGrid
+  el('resultsGrid').innerHTML = `<div class="platform"><h4>Simulated Tracking Report</h4><pre>${JSON.stringify(sim,null,2)}</pre></div>`;
+  window._lastJob = sim;
 });
 
-// ---- helper: simple fetch wrapper with timeout ----
-async function fetchWithTimeout(url, opts={}, timeout=10000){
-  const controller = new AbortController();
-  const id = setTimeout(()=>controller.abort(), timeout);
-  try {
-    return await fetch(url, {...opts, signal: controller.signal});
-  } finally { clearTimeout(id); }
-}
+// export JSON
+el('exportBtn').addEventListener('click', ()=>{
+  const job = window._lastJob;
+  if(!job) return alert('No data to export');
+  const blob = new Blob([JSON.stringify(job,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `osint_${(job.query||'sim')}_${(new Date()).toISOString().slice(0,19)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+});
