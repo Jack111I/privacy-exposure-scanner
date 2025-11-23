@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Compare Fingerprints & Scans</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Compare Stored Scans</h1>
+    <p class="muted">Lists recent scans stored in KV (consented users only).</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <button id="loadScans" class="btn primary">Load recent scans</button>
+      <div id="scanList"></div>
+    </section>
+    <a href="index.html" class="btn link">Back</a>
+  </main>
+
+<script>
+const WORKER_BASE = "https://cyber-exposure-core.YOUR_SUBDOMAIN.workers.dev"; // replace
+document.getElementById('loadScans').addEventListener('click', async () => {
+  const res = await fetch(WORKER_BASE + "/osint-scans");
+  const arr = await res.json();
+  const el = document.getElementById('scanList');
+  el.innerHTML = arr.map(s=>`<div class="scan"><h4>${s.query} — ${s.timestamp}</h4><pre>${JSON.stringify(s.results,null,2)}</pre></div>`).join('');
+});
+</script>
+
+</body>
+</html>
