@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cyber-Blue Privacy & OSINT Scanner</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>Cyber-Blue Privacy & OSINT Scanner</h1>
+      <p class="muted">See what your browser exposes & discover public profiles for a username (consent required).</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card consent" id="consentCard">
+      <h2>Before we start — Consent</h2>
+      <p>This tool will: <b>read browser/device attributes</b> and (if you choose) <b>scan public social/profile URLs for a username</b>. Nothing is sent or stored until you click <em>Allow scan</em> and confirm the OSINT scan. Use ethically.</p>
+      <label><input id="confirmOsintCheckbox" type="checkbox"> I understand and will use results responsibly</label>
+      <label class="tiny">Type <code>I CONSENT</code> to enable OSINT scanning</label>
+      <input id="consentText" placeholder="I CONSENT" />
+      <div class="row">
+        <button id="allowBtn" class="btn primary">Allow scan</button>
+        <button id="allowOsintBtn" class="btn secondary" disabled>Allow OSINT (username scan)</button>
+      </div>
+    </section>
+
+    <section class="card" id="reportCard" style="display:none;">
+      <h2>Your Privacy Report</h2>
+      <div class="row">
+        <div class="col">
+          <h3>Fingerprint</h3>
+          <pre id="fpHash">—</pre>
+        </div>
+        <div class="col">
+          <h3>Browser / OS</h3>
+          <pre id="uaInfo">—</pre>
+        </div>
+      </div>
+
+      <h3>OSINT Username Finder (optional)</h3>
+      <div class="osint-box">
+        <input id="usernameInput" placeholder="Enter username (e.g. aurenix)" />
+        <button id="startOsint" class="btn primary">Scan username</button>
+        <div id="progress" class="progress" style="display:none;"><div id="progressBar"></div></div>
+      </div>
+
+      <div id="resultsGrid" class="grid"></div>
+
+      <div class="row">
+        <button id="exportBtn" class="btn tertiary">Export JSON</button>
+        <a href="compare.html" class="btn link">Compare stored scans</a>
+      </div>
+    </section>
+
+    <section class="card small" id="notes">
+      <h4>Notes</h4>
+     
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>Educational use only — do not abuse. This tool requires explicit consent.</small>
+  </footer>
+
+<script src="script.js"></script>
+</body>
+</html>
